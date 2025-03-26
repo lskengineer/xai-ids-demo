@@ -1,0 +1,29 @@
+name: CI/CD for xAI IDS
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Deploy to Ubuntu VM
+      uses: appleboy/ssh-action@master
+      with:
+        host: 192.168.0.119
+        username: your_vm_user
+        password: ${{ secrets.VM_PASSWORD }}
+        script: |
+          cd ~/xai-ids-demo || git clone https://github.com/YOUR_USERNAME/xai-ids-demo.git
+          cd xai-ids-demo
+          git pull
+          docker stop ids-container || true
+          docker rm ids-container || true
+          docker build -t xai-ids .
+          docker run -d --name ids-container --env-file .env -p 8050:8050 xai-ids
+
