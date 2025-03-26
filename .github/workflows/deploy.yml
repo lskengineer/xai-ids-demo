@@ -1,29 +1,28 @@
-name: CI/CD for xAI IDS
+name: Build and Deploy Locally
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  deploy:
-    runs-on: self-hosted
+  build-and-run:
+    runs-on: self-hosted  # <--- This runs on your VM directly!
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Deploy to Ubuntu VM
-      uses: appleboy/ssh-action@master
-      with:
-        host: 192.168.0.119
-        username: your_vm_user
-        password: ${{ secrets.VM_PASSWORD }}
-        script: |
-          cd ~/xai-ids-demo || git clone https://github.com/YOUR_USERNAME/xai-ids-demo.git
-          cd xai-ids-demo
-          git pull
-          docker stop ids-container || true
-          docker rm ids-container || true
-          docker build -t xai-ids .
-          docker run -d --name ids-container --env-file .env -p 8050:8050 xai-ids
+    - name: Stop Old Docker Container (if any)
+      run: |
+        docker stop ids-container || true
+        docker rm ids-container || true
+
+    - name: Build Docker Image
+      run: docker build -t xai-ids .
+
+    - name: Run Container
+      run: docker run -d --name ids-container --env-file .env -p 8050:8050 xai-ids
+
+    - name: Run Inference Script
+      run: docker exec ids-container python /app/model_runner.py
 
